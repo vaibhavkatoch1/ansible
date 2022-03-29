@@ -1,0 +1,172 @@
+---
+- name: test book
+  hosts: ansible_demo
+  become: true
+  vars:
+          mysql_root_password: "vaibhav.12"
+          mysql_db: "wordpress"
+          mysql_password: "vaibhav.12"
+          mysql_user: "vaibhav"
+
+  tasks:
+          - name: install apache
+            apt:
+                    name: apache2
+                    state: present
+                    update_cache: yes
+          - name: run apache
+            service:
+                    name: apache2
+                    state: started
+                    enabled: yes
+
+          - name: install php
+            apt:
+                    name: php
+                    state: present
+                    update_cache: yes
+
+          - name: install php-mysql
+            apt:
+                    name: php-mysql
+                    state: present
+                    update_cache: yes
+
+          - name: install libapache2
+            apt:
+                    name: libapache2-mod-php
+                    state: present
+                    update_cache: yes
+
+          - name: install mysql-server
+            apt:
+                    name: mysql-server
+                    state: present
+                    update_cache: yes
+
+          - name: install mysql-client
+            apt:
+                    name: mysql-client
+                    update_cache: yes
+                    state: present
+
+          - name: install python3-pip
+            apt:
+                   name: python3-pip
+                   update_cache: yes
+                   state: present
+          
+          - name: install zip
+            apt:
+                   name: zip
+                   update_cache: yes
+                   state: present
+
+          - name: install wget
+            apt:
+                   name: wget
+                   update_cache: yes
+                   state: present
+
+          - name: install pymysql
+            pip:
+                    name: pymysql
+                   # update_cache: yes
+                    state: forcereinstall
+
+         # - name: start up mysql service
+         #   shell: "service mysql start"
+          - name: ensure mysql is enabled to run on startup
+            service:
+                    name: mysql
+                    state: started
+                    enabled: yes
+        
+
+          - name: Set the root password 
+            mysql_user:
+              login_user: 'root'
+              name: root
+              password: "{{ mysql_root_password }}"
+              login_unix_socket: /var/run/mysqld/mysqld.sock
+
+          - name: Remove all anonymous user accounts
+            mysql_user:
+              name: ''
+              host_all: yes
+              state: absent
+              login_user: root
+              login_password: "{{ mysql_root_password }}"
+            tags: [ mysql ]
+
+          - name: Remove the MySQL test database
+            mysql_db:
+              name: test
+              state: absent
+              login_user: root
+              login_password: "{{ mysql_root_password }}"
+            tags: [ mysql ]
+
+          - name: Creates database for WordPress
+            mysql_db:
+              name: "{{ mysql_db }}"
+              state: present
+              login_user: root
+              login_password: "{{ mysql_root_password }}"
+            tags: [ mysql ]
+
+          - name: Create MySQL user for WordPress
+            mysql_user:
+              name: "{{ mysql_user }}"
+              password: "{{ mysql_password }}"
+              priv: "{{ mysql_db }}.*:ALL"
+              state: present
+              login_user: root
+              login_password: "{{ mysql_root_password }}"
+            tags: [ mysql ]
+
+          - name: Download and unpack latest WordPress
+            unarchive:
+                    src: https://wordpress.org/latest.zip
+                    dest: "/var/www/html/"
+                    remote_src: yes
+                    creates: "/var/www/html/wordpress"
+            tags: [ wordpress ]
+
+          - name: Set ownership
+            file:
+                   path: "/var/www/html/wordpress"
+                   state: directory
+                   recurse: yes
+                   owner: www-data
+                   group: www-data
+            tags: [ wordpress ]
+
+          - name: Set permissions for directories
+            shell: "/usr/bin/find /var/www/html/wordpress/ -type d -exec chmod 750 {} \\;"
+            tags: [ wordpress ]
+
+          - name: Set permissions for files
+            shell: "/usr/bin/find /var/www/html/wordpress/ -type f -exec chmod 640 {} \\;"
+            tags: [ wordpress ]
+
+          #- name: Set up wp-config
+           # template:
+            #  src: "files/wp-config.php.j2"
+             # dest: "/var/www/html/wordpress/wp-config.php"
+            #tags: [ wordpress ]
+          - name: Restart Apache
+            service:
+              name: apache2
+              state: restarted
+
+  handlers:
+         # - name: Reload Apache
+         #   service:
+          #    name: apache2
+           #   state: reloaded
+
+          - name: Restart Apache
+            service:
+              name: apache2
+              state: restarted

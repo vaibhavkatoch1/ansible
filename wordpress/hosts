@@ -1,0 +1,2 @@
+[ansible_demo]
+3.139.75.228 ansible_ssh_user=ubuntu ansible_ssh_private_key_file=/home/vaibhav/.ssh/new-accountkey.pem ansible_python_interpreter=/usr/bin/python3
